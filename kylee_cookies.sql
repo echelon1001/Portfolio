@@ -1,3 +1,5 @@
+
+DROP DATABASE IF EXISTS kylee_cookies;
 CREATE DATABASE Kylee_Cookies;
 USE Kylee_Cookies;
 
@@ -85,28 +87,54 @@ VALUES  ('Cindy Lou', '1017 Nutcracker Rd.', 'Whoville', 'ME', 37256, 'United St
         ('Mac Robinson', '999 South St' ,'New York', 'NY' ,64890, 'United States', 308629, 10),
         ('Herman Munster', '1313 Mockingbird Lane', 'Creepy City', 'NY', 64890, 'United States', 308630, 10);
 
+-- queries
 
-
-SELECT cookie_name, orders_id, cost_per_cookie, cookies_ordered, customerid FROM cookies
-JOIN orders ON cookies.customerid = orders.customer_id;
+SELECT
+   cookie_name, 
+   orders_id, 
+   cost_per_cookie,
+   cookies_ordered, 
+   customerid 
+FROM cookies
+JOIN orders
+ ON cookies.customerid = orders.customer_id;
 
 
 ALTER TABLE customers
 RENAME COLUMN customer_id TO customerid;
                  
-    SELECT orderid, customer_name, city FROM customers
-JOIN orders ON orders.orderid = customers.order_id
-   WHERE city = 'creepy city';
+ SELECT 
+   orderid,
+   customer_name,
+   city 
+FROM customers
+JOIN orders
+ ON orders.orderid = customers.order_id
+ WHERE city = 'creepy city';
 
          
       
 
     SELECT * FROM orders;
     
-SELECT cookie_name, cookies_ordered, customerid, customer_name, state FROM cookies
-    JOIN orders ON cookies.customerid = orders.customer_id
-    JOIN customers ON cookies.customerid = customers.customer_id
-GROUP BY cookie_name, cost_per_cookie, cookies_ordered, customerid, customer_name, state;
+SELECT 
+   cookie_name,
+   cookies_ordered, 
+   customerid,
+   customer_name, 
+   state 
+FROM cookies
+    JOIN orders
+ ON cookies.customerid = orders.customer_id
+    JOIN customers
+ ON cookies.customerid = customers.customer_id
+GROUP BY 
+   cookie_name, 
+   cost_per_cookie, 
+   cookies_ordered, 
+   customerid, 
+   customer_name, 
+   state;
 
        
 SELECT * FROM cookies

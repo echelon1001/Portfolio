@@ -161,14 +161,9 @@ CREATE TABLE orders
 (7, '2023-10-12', '147 Spruce St, San Antonio', 60.25, 'Shipped','cash'),
 (1, '2023-10-13', '258 Fir St, San Diego', 135.75, 'Delivered', 'gift card'),
 (3, '2023-10-14', '369 Chestnut St, Dallas', 89.50, 'Pending', null),
-(10, '2023-10-15', '159 Poplar St, San Jose', 200.00, 'Shipped', 'gift card');  -- in a real table, when entering customer_id,
--- you would use a query to look up the customer name and retrieve their customer_id to put into the orders table.
-/*If you are adding a new customer and placing their order at the same time, you would first need to insert
- the customer into the Customers table to generate the customer_id (which will be auto-incremented).
- Once that is done, you can retrieve this newly generated customer_id and use it in the Orders table.
-You do not use the DEFAULT keyword for customer_id in the Orders table**—because** the customer_id 
-is a foreign key and needs to reference an existing value from the Customers table.*/
+(10, '2023-10-15', '159 Poplar St, San Jose', 200.00, 'Shipped', 'gift card');  
 
+	
 UPDATE orders
 SET payment_method = 'Debit Card'
 WHERE customer_id = 9;

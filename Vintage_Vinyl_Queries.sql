@@ -66,7 +66,7 @@ JOIN inventory i
 ON
 s.supplier_id = i.supplier_id
 GROUP BY supplier_name
-HAVING num_albums >= 1; -- cannot get 5 because each supplier in my DB has only provided 1 album each
+HAVING num_albums >= 5; 
 
 -- Find the album with the largest gap between its stock quantity and the total quantity ordered:
 
@@ -75,7 +75,8 @@ FROM Albums Al
 LEFT JOIN Order_Details OD ON Al.album_id = OD.album_id
 GROUP BY Al.album_id
 ORDER BY quantity_gap DESC
-LIMIT 1; /*the coalesce will take care of any null values in the quantity section 
+LIMIT 1; 
+/*the coalesce will take care of any null values in the quantity section 
             and replace them with 0 so the math will work correctly*/
             
 

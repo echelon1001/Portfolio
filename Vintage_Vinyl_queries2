@@ -1,0 +1,172 @@
+-- 1. Identify the first album stocked by each supplier based on purchase date
+
+SELECT supplier_name, album_id, purchase_date,
+       ROW_NUMBER() OVER (PARTITION BY s.supplier_name ORDER BY purchase_date ASC) AS first_stocked
+FROM inventory i
+JOIN suppliers s 
+ON i.supplier_id = s.supplier_id;
+
+-- 2. List the most expensive album by each record label
+With MEA AS (
+SELECT a.album_title, r.label_name, price,
+	ROW_NUMBER() OVER (PARTITION BY label_name ORDER BY price DESC) AS most_expensive_album
+FROM albums a 
+JOIN record_labels r 
+ON a.label_id = r.label_id)
+
+SELECT album_title, label_name, price, most_expensive_album
+FROM MEA
+WHERE most_expensive_album = 1;
+
+-- 3. Get the most recent order placed by each customer 
+SELECT CONCAT(first_name, ' ', last_name) AS customer, o.order_id, o.order_date,
+ROW_NUMBER() OVER(PARTITION BY order_id ORDER BY order_date DESC) AS most_recent_order
+FROM customers c 
+JOIN orders o 
+ON c.customer_id = o.customer_id;
+
+-- 4 Rank artists based on the number of albums stocked
+SELECT artist_name, COUNT(album_id) AS total_albums,
+ROW_NUMBER() OVER(ORDER BY COUNT(album_id) DESC) AS artist_rank
+FROM artists a 
+JOIN albums al 
+ON a.artist_id = al.artist_id
+GROUP BY artist_name;
+
+-- 5. List the top 3 albums with the highest stock quantity in each genre
+WITH album_quantity AS (
+SELECT album_title, genre_name, stock_quantity,
+	ROW_NUMBER() OVER(PARTITION BY genre_name ORDER BY stock_quantity DESC) AS album_stock
+FROM albums a 
+JOIN genres g 
+ON a.genre_id = g.genre_id)
+
+SELECT album_title, genre_name, stock_quantity, album_stock
+FROM album_quantity
+GROUP BY album_title, genre_name, stock_quantity, album_stock
+HAVING album_stock <=3;
+
+-- 6. Rank customers by the total amount they’ve spent on orders:
+
+SELECT CONCAT(c.first_name, ' ', c.last_name) AS customer, SUM(o.total_amount) AS total,
+	RANK() OVER(ORDER BY SUM(o.total_amount) DESC) AS order_rank
+FROM customers c 
+JOIN orders o 
+ON c.customer_id = o.customer_id
+GROUP BY customer;
+
+-- 7. Rank albums by price within each genre
+
+SELECT a.album_title, a.price, g.genre_name,
+	RANK() OVER(PARTITION BY genre_name ORDER BY price DESC) AS price_rank
+FROM albums a 
+JOIN genres g 
+ON a.genre_id = g.genre_id;
+
+-- 8. Rank record labels based on the total stock of albums they’ve produced
+
+SELECT rl.label_name, a.label_id, SUM(a.stock_quantity) AS total_stock,
+	RANK() OVER(ORDER BY SUM(a.stock_quantity)DESC) AS stock_rank
+FROM record_labels rl 
+JOIN albums a 
+ON rl.label_id = a.label_id
+GROUP BY label_name, label_id;
+
+-- 9. Rank suppliers by the total quantity of albums they’ve supplied
+
+SELECT supplier_name, SUM(quantity) AS quantity,
+RANK() OVER(ORDER BY SUM(quantity) DESC) AS supply_rank
+FROM suppliers s 
+JOIN inventory i 
+ON s.supplier_id = i.inventory_id
+Group by supplier_name;
+
+-- 10. Rank albums by the earliest release year within each record label
+
+SELECT a.album_title, a.release_year, a.label_id, r.label_name,
+	RANK() OVER(PARTITION BY label_name ORDER BY release_year ASC) AS earliest_release_year_ranking
+FROM albums a 
+JOIN record_labels r 
+ON a.label_id = r.label_id;
+
+-- 11. Compare the price of each album with the next more expensive album
+SELECT album_title, price,
+	LEAD(price) OVER(ORDER BY price) AS next_most_expensive_album_price,
+    LEAD(price) OVER(ORDER BY price) - price AS difference
+FROM albums;
+
+-- 12. Find the next order date for each customer
+SELECT CONCAT(c.first_name, ' ', c.last_name) AS customer, o.order_date,
+	LEAD(o.order_date) OVER(PARTITION BY first_name, last_name ORDER BY order_date) AS next_order_date
+FROM customers c 
+JOIN orders o 
+ON c.customer_id = o.customer_id;
+
+-- 13. Determine the next album a supplier will stock based on purchase date
+SELECT a.album_title, s.supplier_name, i.purchase_date,
+	LEAD(album_title) OVER(PARTITION BY s.supplier_name ORDER BY i.purchase_date) AS next_album
+FROM albums a 
+JOIN inventory i 
+ON a.album_id = i.album_id
+JOIN suppliers s 
+ON i.supplier_id = s.supplier_id;
+
+-- 14. Compare stock quantities for consecutive albums in the same genre
+
+SELECT album_title, genre_id, stock_quantity,
+LEAD(stock_quantity) OVER(PARTITION BY genre_id ORDER BY stock_quantity) AS next_album
+FROM albums;
+
+-- 15. Compare customers' total spending to the next highest spender
+SELECT CONCAT(first_name, ' ', last_name) AS customer, SUM(total_amount) AS total,
+	LEAD(SUM(total_amount)) OVER(ORDER BY SUM(total_amount) DESC)  AS next_spender_amount
+FROM customers c 
+JOIN orders o
+ON c.customer_id = o.customer_id
+GROUP BY first_name, last_name;
+
+-- 16. Compare the price of each album to the previous cheaper album
+SELECT album_title, price,
+LAG(price) OVER(ORDER BY price DESC) AS previous_price,
+price- LAG(price) OVER(ORDER BY price DESC) AS difference
+FROM albums;
+
+-- 17. Find the previous order date for each customer
+SELECT CONCAT(c.first_name, ' ', c.last_name) AS customer, o.order_date,
+	LAG(order_date) OVER(PARTITION BY first_name, last_name ORDER BY order_date) AS previous_date
+FROM customers c 
+JOIN orders o 
+ON c.customer_id = o.customer_id;
+
+-- 18. Determine the previously stocked album for each supplier:
+
+SELECT supplier_id, album_id, purchase_date,
+       LAG(album_id) OVER (PARTITION BY supplier_id ORDER BY purchase_date ASC) AS previous_album_id
+FROM inventory;
+
+-- 19. Compare stock quantities for consecutive albums in the same genre:
+SELECT a.album_title, g.genre_name, a.stock_quantity,
+	LAG(stock_quantity) OVER(PARTITION BY genre_name ORDER BY stock_quantity DESC) AS next_stock,
+    stock_quantity - LAG(stock_quantity) OVER(PARTITION BY genre_name ORDER BY stock_quantity) AS difference
+FROM albums a 
+JOIN genres g 
+ON a.genre_id = g.genre_id;
+
+-- 20. Compare total spending for each customer to the previous spender
+
+SELECT customer_id, SUM(total_amount) AS total_spent,
+       LAG(SUM(total_amount)) OVER (ORDER BY SUM(total_amount) DESC) AS previous_total_spent
+FROM orders
+GROUP BY customer_id;
+
+
+
+
+
+
+
+
+
+
+
+

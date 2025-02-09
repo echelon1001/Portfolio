@@ -17,7 +17,7 @@ FROM Albums Al
 JOIN Order_Details OD ON Al.album_id = OD.album_id
 JOIN Orders O ON OD.order_id = O.order_id
 GROUP BY Al.album_id
-HAVING distinct_customers >= 2;  -- this particular set doesnt have >=2.alter
+HAVING distinct_customers >= 2; 
 
 -- Get the average album price for each genre, but only include genres with an average price over $15:
 SELECT g.genre_name, ROUND(AVG(a.price),2) AS Avg_Price

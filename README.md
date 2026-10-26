@@ -98,5 +98,4 @@ Projects include AdventureWorks analysis and additional SQL practice datasets.
 
 Over ten years of professional experience analyzing automotive manufacturer data, evaluating vehicle valuations, investigating dealership discrepancies, and supporting financial recovery efforts for lending institutions.
 
-I combine practical business analysis experience with technical skills in SQL, Excel, and Power BI to deliver accurate, actionable information.
 

@@ -1,0 +1,151 @@
+-- 1. Sales & Product
+-------------------------------------------------------------------------------
+	--1.	Find the top 10 products by total sales in the last 6 months.
+SELECT TOP 10
+    dp.EnglishProductName AS Product,
+    SUM(fis.SalesAmount) AS TotalSales
+FROM FactInternetSales fis
+JOIN DimDate dd
+    ON dd.DateKey = fis.OrderDateKey
+JOIN DimProduct dp
+    ON dp.ProductKey = fis.ProductKey
+WHERE dd.FullDateAlternateKey >= DATEADD(MONTH, -6,
+        (SELECT MAX(FullDateAlternateKey) FROM DimDate))
+GROUP BY dp.EnglishProductName
+ORDER BY TotalSales DESC;
+
+	-- 2.	Identify the 5 product subcategories with the highest average order value.
+	SELECT TOP 5
+    dpsc.EnglishProductSubcategoryName AS Subcategory,
+    AVG(fis.SalesAmount) AS AvgOrderValue
+FROM FactInternetSales fis
+JOIN DimProduct dp
+    ON dp.ProductKey = fis.ProductKey
+JOIN DimProductSubcategory dpsc
+    ON dp.ProductSubcategoryKey = dpsc.ProductSubcategoryKey
+GROUP BY dpsc.EnglishProductSubcategoryName
+ORDER BY AvgOrderValue DESC;
+
+	-- 3.	List all products that have never been sold in the last 12 months.
+
+	SELECT
+    dp.EnglishProductName AS Product
+FROM DimProduct dp
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM FactInternetSales fis
+    JOIN DimDate dd
+        ON dd.DateKey = fis.OrderDateKey
+    WHERE fis.ProductKey = dp.ProductKey
+      AND dd.FullDateAlternateKey >= DATEADD(
+            MONTH, -12,
+            (SELECT MAX(FullDateAlternateKey) FROM DimDate)
+          )
+);
+	-- 4.	Show total sales by product category for each calendar quarter.
+	SELECT
+    dpc.EnglishProductCategoryName AS ProductCategory,
+    dd.CalendarYear,
+    dd.CalendarQuarter,
+    SUM(fis.SalesAmount) AS TotalSales
+FROM FactInternetSales fis
+JOIN DimDate dd
+    ON dd.DateKey = fis.OrderDateKey
+JOIN DimProduct dp
+    ON fis.ProductKey = dp.ProductKey
+JOIN DimProductSubcategory dpsc
+    ON dp.ProductSubcategoryKey = dpsc.ProductSubcategoryKey
+JOIN DimProductCategory dpc
+    ON dpsc.ProductCategoryKey = dpc.ProductCategoryKey
+GROUP BY dpc.EnglishProductCategoryName,
+         dd.CalendarYear,
+         dd.CalendarQuarter
+ORDER BY dd.CalendarYear,
+         dd.CalendarQuarter,
+         dpc.EnglishProductCategoryName;
+
+		 -- 5.	Find the product with the largest difference between list price and average selling price.
+SELECT TOP 1
+    dp.EnglishProductName AS Product,
+    dp.ListPrice,
+    AVG(fis.UnitPrice) AS AvgSellingPrice,
+    dp.ListPrice - AVG(fis.UnitPrice) AS PriceDifference
+FROM FactInternetSales fis
+JOIN DimProduct dp
+    ON fis.ProductKey = dp.ProductKey
+GROUP BY dp.EnglishProductName, dp.ListPrice
+ORDER BY PriceDifference DESC;
+
+-- 2. Customers & Segmentation
+------------------------------------------------------------------------------------
+	-- 6.	Count how many customers are in each region.
+SELECT
+	dg.EnglishCountryRegionName AS Region,
+	COUNT(DISTINCT CustomerKey) AS CustomerCount
+FROM DimGeography dg
+JOIN DimCustomer dc
+	ON dg.GeographyKey = dc.GeographyKey
+GROUP BY dg.EnglishCountryRegionName
+ORDER BY CustomerCount DESC;
+
+	-- 7.	Identify customers who placed more than 5 orders in the last year.
+SELECT
+	dc.CustomerKey,
+	CONCAT(dc.FirstName, ' ', dc.LastName) AS Customer,
+	COUNT(DISTINCT SalesOrderNumber) AS OrderCount
+FROM DimDate dd
+JOIN FactInternetSales fis
+	ON	dd.DateKey = fis.OrderDateKey
+JOIN  DimCustomer dc
+	ON fis.CustomerKey = dc.CustomerKey
+WHERE dd.FullDateAlternateKey >= DATEADD(MONTH, -12,
+        (SELECT MAX(FullDateAlternateKey) FROM DimDate))
+GROUP BY dc.CustomerKey, CONCAT(dc.FirstName, ' ', dc.LastName)
+HAVING COUNT(DISTINCT SalesOrderNumber)  > 3;
+
+     -- 8.	Find customers whose average order value increased compared to the previous year.
+
+WITH AvgSales AS (
+SELECT
+	dd.CalendarYear,
+	CONCAT(dc.FirstName, ' ', dc.LastName) AS Customer,
+	AVG(fis.SalesAmount) AS AvgSales
+FROM 
+DimDate dd
+JOIN FactInternetSales fis
+	ON dd.DateKey = fis.OrderDateKey
+JOIN DimCustomer dc 
+	ON fis.CustomerKey = dc.CustomerKey
+GROUP BY dd.CalendarYear, CONCAT(dc.FirstName, ' ', dc.LastName)
+)
+, LagSales AS(
+SELECT 
+	CalendarYear,
+	Customer,
+	AvgSales,
+	LAG(AvgSales) OVER(PARTITION BY Customer ORDER BY CalendarYear) AS PreviousYearSales
+FROM AvgSales
+)
+SELECT
+	CalendarYear,
+	Customer,
+	AvgSales,
+	PreviousYearSales,
+	CASE
+		WHEN AvgSales > PreviousYearSales THEN 'Increase'
+		ELSE 'Decrease'
+END AS Flag
+	
+FROM LagSales
+ORDER BY Customer, CalendarYear;
+
+         -- 9.	List the top 20 customers by total lifetime sales.
+SELECT TOP 20
+	CONCAT(dc.FirstName, ' ', dc.LastName) AS Customer,
+	SUM(fis.SalesAmount) AS TotalSales
+FROM DimCustomer dc
+JOIN FactInternetSales fis
+	ON dc.CustomerKey = fis.Customerkey
+GROUP BY CONCAT(dc.FirstName, ' ', dc.LastName)
+ORDER BY TotalSales DESC;
+
